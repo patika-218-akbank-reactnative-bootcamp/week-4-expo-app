@@ -1,17 +1,23 @@
 import {useNavigation} from '@react-navigation/native';
 import {createUserWithEmailAndPassword} from 'firebase/auth';
+import {setDoc, doc} from 'firebase/firestore';
 import {Button, Input, Pressable, Text, View} from 'native-base';
 import {Controller, useForm} from 'react-hook-form';
-import {auth} from '../utils/firebase';
+import {auth, db} from '../utils/firebase';
 
 export const SignUpScreen = () => {
-  const {control, watch, handleSubmit} = useForm();
+  const {control, handleSubmit} = useForm();
   const {navigate} = useNavigation();
 
   const handleSignUp = data => {
     console.log(data);
     createUserWithEmailAndPassword(auth, data.email, data.password).then(
-      response => {
+      async response => {
+        await setDoc(doc(db, `user`, response.user.uid), {
+          email: response.user.email,
+          photoURL: response.user.photoURL,
+          id: response.user.uid,
+        });
         navigate('SignIn');
       },
     );
@@ -42,6 +48,7 @@ export const SignUpScreen = () => {
             {...field}
             my={2}
             onChangeText={field.onChange}
+            secureTextEntry={true}
           />
         )}
       />

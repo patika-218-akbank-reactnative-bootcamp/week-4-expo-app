@@ -1,38 +1,43 @@
 import React from 'react';
 
 import {signInWithEmailAndPassword} from 'firebase/auth';
-import {auth} from '../utils/firebase';
-import {useDispatch, useSelector} from 'react-redux';
+import {auth, db} from '../utils/firebase';
+import {useDispatch} from 'react-redux';
 import {signIn} from '../utils/store';
 
 import {useNavigation} from '@react-navigation/native';
 import {useForm, Controller} from 'react-hook-form';
-import {Button, Input, Text, View} from 'native-base';
+import {Button, Input, Text, View, useToast} from 'native-base';
+import {doc, getDoc} from 'firebase/firestore';
 
 export const SignInScreen = () => {
   const {
     control,
     handleSubmit,
     formState: {errors},
-  } = useForm();
+  } = useForm({
+    defaultValues: {
+      email: 'enesozturk.d@gmail.com',
+      password: 'enes.123',
+    },
+  });
+  const {show} = useToast();
   const {navigate} = useNavigation();
   const dispatch = useDispatch();
-  const user = useSelector(state => state.auth.user);
 
   const handleSignIn = data => {
-    console.log(data);
     signInWithEmailAndPassword(auth, data.email, data.password)
-      .then(response => {
-        console.log(response);
-        dispatch(
-          signIn({
-            email: response.user.email,
-            phone: response.user.phoneNumber,
-          }),
-        );
+      .then(async response => {
+        const userDoc = doc(db, 'user', response.user.uid);
+        const userRef = await getDoc(userDoc);
+        if (userRef.exists()) {
+          dispatch(signIn(userRef.data()));
+        }
       })
       .catch(err => {
-        console.log(err);
+        show({
+          description: err.message,
+        });
       });
   };
 
@@ -49,6 +54,7 @@ export const SignInScreen = () => {
           return (
             <Input
               placeholder="E-mail"
+              autoCapitalize="none"
               my={2}
               {...field}
               onChangeText={field.onChange}
@@ -66,6 +72,7 @@ export const SignInScreen = () => {
         render={({field}) => {
           return (
             <Input
+              secureTextEntry
               placeholder="Password"
               my={2}
               {...field}
@@ -77,6 +84,17 @@ export const SignInScreen = () => {
 
       <Button onPress={handleSubmit(handleSignIn)} style={{marginVertical: 16}}>
         <Text color={'white'}>Sign In</Text>
+      </Button>
+
+      <Text>Did you forget your pasword?</Text>
+
+      <Button
+        variant={'ghost'}
+        mb={6}
+        onPress={() => {
+          navigate('ForgotPassword');
+        }}>
+        <Text>Reset Password</Text>
       </Button>
 
       <Button
